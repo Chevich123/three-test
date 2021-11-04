@@ -21,11 +21,9 @@ export class AppComponent {
     const points = [];
     const ratio = 2;
     for (let deg = 0; deg <= 180; deg += 6) {
-
       const rad = Math.PI * deg / 180;
       const point = new THREE.Vector2((0.72 + .08 * Math.cos(rad)) * Math.sin(rad) * ratio, -Math.cos(rad) * ratio);
       points.push(point);
-
     }
 
     this.meshes = [

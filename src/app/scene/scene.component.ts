@@ -1,6 +1,8 @@
-import { AfterViewInit, Component, ElementRef, HostListener, Input, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { debounceTime, Subject, Subscription } from 'rxjs';
 import * as THREE from 'three';
 import { IMesh } from '../mesh.interface';
+import { CameraService } from '../camera.service';
 
 export enum KEY_CODE {
   RIGHT_ARROW = 'ArrowRight',
@@ -14,20 +16,22 @@ export enum KEY_CODE {
   templateUrl: './scene.component.html',
   styleUrls: ['./scene.component.scss'],
 })
-export class SceneComponent implements AfterViewInit {
+export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
   @ViewChild('canvas') canvasRef: ElementRef | undefined;
-  @Input() cameraZ: number = 250;
-  @Input() fieldOfView: number = 10;
-  @Input('nearClipping') nearClippingPlane: number = 1;
-  @Input('farClipping') farClippingPlane: number = 10000;
+  nearClippingPlane = 1;
+  farClippingPlane = 10000;
+  cameraPosition!: THREE.Vector3;
+  fieldOfView = 10;
   step = 0.3;
   camera!: THREE.PerspectiveCamera;
   mesh: THREE.Mesh[] = [];
   animations: ((() => void) | null)[] = [];
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
+  sub = new Subscription();
+  changes = new Subject<THREE.Vector3>();
 
-  constructor() {
+  constructor(private readonly cameraService: CameraService) {
   }
 
   @Input() set meshes(values: IMesh[]) {
@@ -42,6 +46,17 @@ export class SceneComponent implements AfterViewInit {
 
   get canvas(): HTMLCanvasElement {
     return this.canvasRef?.nativeElement;
+  }
+
+  ngOnDestroy(): void {
+    this.sub.unsubscribe();
+  }
+
+  ngOnInit(): void {
+    this.cameraPosition = this.cameraService.readCameraPosition();
+    this.sub.add(this.changes.pipe(debounceTime(600)).subscribe(value => {
+      this.cameraService.saveCameraPosition(value);
+    }));
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -61,17 +76,15 @@ export class SceneComponent implements AfterViewInit {
     if (event.key === KEY_CODE.RIGHT_ARROW) {
       this.camera.translateX(-this.step);
     }
+
+    this.changes.next(this.camera.position);
   }
 
   @HostListener('wheel', ['$event'])
   wheelEvent(event: WheelEvent) {
     event.preventDefault();
-    if (event.deltaY < 0) {
-      this.camera.translateZ(-10);
-      return;
-    }
-    this.camera.translateZ(10);
-
+    this.camera.translateZ(event.deltaY < 0 ? -10 : 10);
+    this.changes.next(this.camera.position);
   }
 
   ngAfterViewInit(): void {
@@ -102,7 +115,8 @@ export class SceneComponent implements AfterViewInit {
       this.farClippingPlane,
     );
     this.camera.add(cameraPointLight);
-    this.camera.position.z = this.cameraZ;
+    const { x, y, z } = this.cameraPosition;
+    this.camera.position.set(x, y, z);
 
     this.scene.add(this.camera);
   }
