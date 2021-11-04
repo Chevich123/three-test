@@ -48,11 +48,11 @@ export class SceneComponent implements AfterViewInit {
   keyEvent(event: KeyboardEvent) {
     event.preventDefault();
     if (event.key === KEY_CODE.UP_ARROW) {
-      this.camera.translateY(this.step);
+      this.camera.translateY(-this.step);
     }
 
     if (event.key === KEY_CODE.DOWN_ARROW) {
-      this.camera.translateY(-this.step);
+      this.camera.translateY(this.step);
     }
     if (event.key === KEY_CODE.LEFT_ARROW) {
       this.camera.translateX(this.step);
