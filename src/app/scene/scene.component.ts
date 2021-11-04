@@ -1,5 +1,6 @@
-import { AfterViewInit, Component, ElementRef, HostListener, Input, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, Input, ViewChild } from '@angular/core';
 import * as THREE from 'three';
+import { IMesh } from '../mesh.interface';
 
 export enum KEY_CODE {
   RIGHT_ARROW = 'ArrowRight',
@@ -13,27 +14,31 @@ export enum KEY_CODE {
   templateUrl: './scene.component.html',
   styleUrls: ['./scene.component.scss'],
 })
-export class SceneComponent implements AfterViewInit, OnInit {
+export class SceneComponent implements AfterViewInit {
   @ViewChild('canvas') canvasRef: ElementRef | undefined;
-  @Input() cameraZ: number = 400;
+  @Input() cameraZ: number = 250;
   @Input() fieldOfView: number = 10;
   @Input('nearClipping') nearClippingPlane: number = 1;
   @Input('farClipping') farClippingPlane: number = 10000;
   step = 0.3;
-  rotationSpeedX: number = 0.1;
-  rotationSpeedY: number = 0.01;
-  pokeBallTexture: string = '/assets/45634.png';
-  texture: string = '/assets/texture.jpg';
   camera!: THREE.PerspectiveCamera;
-  loader = new THREE.TextureLoader();
-  geometry = new THREE.SphereGeometry();
-  geometry2 = new THREE.BoxGeometry(2, 2, 2);
   mesh: THREE.Mesh[] = [];
+  animations: ((() => void) | null)[] = [];
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
 
   constructor() {
   }
+
+  @Input() set meshes(values: IMesh[]) {
+    values.forEach(value => {
+      const mesh = new THREE.Mesh(value.geometry, value.material);
+      const { x, y, z } = value.position;
+      mesh.position.set(x, y, z);
+      this.mesh.push(mesh);
+      this.animations.push(value.animation ? value.animation.bind(this, mesh) : null);
+    });
+  };
 
   get canvas(): HTMLCanvasElement {
     return this.canvasRef?.nativeElement;
@@ -69,13 +74,6 @@ export class SceneComponent implements AfterViewInit, OnInit {
 
   }
 
-  ngOnInit(): void {
-    const pokeBallMaterial = new THREE.MeshLambertMaterial({ map: this.loader.load(this.pokeBallTexture) });
-    const material = new THREE.MeshLambertMaterial({ map: this.loader.load(this.texture) });
-    this.mesh.push(new THREE.Mesh(this.geometry, pokeBallMaterial));
-    this.mesh.push(new THREE.Mesh(this.geometry2, material));
-  }
-
   ngAfterViewInit(): void {
     this.createScene();
     this.startRenderingLoop();
@@ -93,13 +91,6 @@ export class SceneComponent implements AfterViewInit, OnInit {
     // scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('black');
-    // if (this.mesh[0]) {
-    //   this.mesh[0].position.set(0, 0, 0);
-    // }
-    if (this.mesh[1]) {
-      this.mesh[1].position.x = -5;
-      this.mesh[1].position.y = 5;
-    }
     this.scene.add(...this.mesh);
 
     // camera
@@ -116,14 +107,6 @@ export class SceneComponent implements AfterViewInit, OnInit {
     this.scene.add(this.camera);
   }
 
-  animateCube(index: number) {
-    if (!this.mesh[index]) {
-      return;
-    }
-    this.mesh[index].rotation.x += this.rotationSpeedX;
-    this.mesh[index].rotation.y += this.rotationSpeedY;
-  }
-
   startRenderingLoop() {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
     this.renderer.setPixelRatio(devicePixelRatio);
@@ -132,8 +115,12 @@ export class SceneComponent implements AfterViewInit, OnInit {
     let component: SceneComponent = this;
     (function render() {
       requestAnimationFrame(render);
-      component.animateCube(0);
-      component.animateCube(1);
+      component.animations.forEach(animation => {
+        if (!animation) {
+          return;
+        }
+        animation();
+      });
       component.renderer.render(component.scene, component.camera);
     }());
   }
