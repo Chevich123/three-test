@@ -1,20 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { SphereComponent } from './sphere.component';
+import { SceneComponent } from './scene.component';
 
-describe('CubeComponent', () => {
-  let component: SphereComponent;
-  let fixture: ComponentFixture<SphereComponent>;
+describe('SceneComponent', () => {
+  let component: SceneComponent;
+  let fixture: ComponentFixture<SceneComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ SphereComponent ]
+      declarations: [ SceneComponent ]
     })
     .compileComponents();
   });
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(SphereComponent);
+    fixture = TestBed.createComponent(SceneComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
