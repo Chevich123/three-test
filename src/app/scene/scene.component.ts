@@ -1,8 +1,9 @@
 import { AfterViewInit, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { debounceTime, Subject, Subscription } from 'rxjs';
+import { debounceTime, Subject, Subscription, switchMap } from 'rxjs';
 import * as THREE from 'three';
-import { IMesh } from '../mesh.interface';
-import { CameraService } from '../camera.service';
+import { IMesh } from '../interfaces/mesh.interface';
+import { CameraService } from '../services/camera.service';
+import { ICamera } from '../interfaces/camera.interface';
 
 export enum KEY_CODE {
   RIGHT_ARROW = 'ArrowRight',
@@ -20,7 +21,7 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
   @ViewChild('canvas') canvasRef: ElementRef | undefined;
   nearClippingPlane = 1;
   farClippingPlane = 10000;
-  cameraPosition!: THREE.Vector3;
+  cameraPosition: ICamera | undefined;
   fieldOfView = 10;
   step = 0.3;
   camera!: THREE.PerspectiveCamera;
@@ -53,14 +54,30 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.cameraPosition = this.cameraService.readCameraPosition();
-    this.sub.add(this.changes.pipe(debounceTime(600)).subscribe(value => {
-      this.cameraService.saveCameraPosition(value);
+    this.sub.add(this.changes.pipe(
+      debounceTime(600),
+      switchMap(value => this.cameraService.saveCameraPosition(value)),
+    ).subscribe(() => {
     }));
+    this.cameraService.readCameraPosition().subscribe(position => {
+      this.cameraPosition = position;
+      if (this.camera) {
+        const { x, y, z } = this.cameraPosition;
+        this.camera.position.set(x, y, z);
+      }
+    });
   }
 
   @HostListener('window:keydown', ['$event'])
   keyEvent(event: KeyboardEvent) {
+    if (![
+      KEY_CODE.UP_ARROW,
+      KEY_CODE.DOWN_ARROW,
+      KEY_CODE.LEFT_ARROW,
+      KEY_CODE.RIGHT_ARROW,
+    ].includes(event.key as KEY_CODE)) {
+      return;
+    }
     event.preventDefault();
     if (event.key === KEY_CODE.UP_ARROW) {
       this.camera.translateY(-this.step);
@@ -115,8 +132,6 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
       this.farClippingPlane,
     );
     this.camera.add(cameraPointLight);
-    const { x, y, z } = this.cameraPosition;
-    this.camera.position.set(x, y, z);
 
     this.scene.add(this.camera);
   }
