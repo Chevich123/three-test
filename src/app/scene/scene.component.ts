@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { debounceTime, Subject, Subscription, switchMap } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
 import * as THREE from 'three';
 import { IMesh } from '../interfaces/mesh.interface';
 import { CameraService } from '../services/camera.service';
