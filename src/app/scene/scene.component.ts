@@ -32,7 +32,9 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
   sub = new Subscription();
   changes = new Subject<THREE.Vector3>();
 
-  constructor(private readonly cameraService: CameraService) {
+  constructor(
+    private readonly cameraService: CameraService,
+  ) {
   }
 
   @Input() set meshes(values: IMesh[]) {

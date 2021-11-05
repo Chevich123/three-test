@@ -9,7 +9,6 @@ import { Vector3 } from 'three/src/math/Vector3';
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent {
-  title = 'front-app';
   loader = new THREE.TextureLoader();
   pokeBallTexture: string = '/assets/red.png';
   windowTexture: string = '/assets/wood.jpg';

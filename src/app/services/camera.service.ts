@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ICamera } from '../interfaces/camera.interface';
 import { environment } from '../../environments/environment';
-import { map, Observable } from 'rxjs';
+import { catchError, map, Observable, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -28,6 +28,9 @@ export class CameraService {
           return this.defaultAnswer;
         }
         return answer;
+      }),
+      catchError(() => {
+        return of(this.defaultAnswer);
       }),
     );
   }
