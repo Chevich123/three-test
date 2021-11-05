@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { of } from 'rxjs/internal/observable/of';
 import { CameraService } from './camera.service';
-import { environment } from 'src/environments/environment';
+import { environment } from '../../environments/environment';
 
 describe('CameraService', () => {
   let service: CameraService;
