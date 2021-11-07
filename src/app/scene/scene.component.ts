@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, ElementRef, HostListener, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { Subject, Subscription } from 'rxjs';
+import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 import * as THREE from 'three';
 import { IMesh } from '../interfaces/mesh.interface';
@@ -26,11 +26,11 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
   fieldOfView = 10;
   step = 0.3;
   camera!: THREE.PerspectiveCamera;
-  mesh: THREE.Mesh[] = [];
+  meshArray: THREE.Mesh[] = [];
   animations: ((() => void) | null)[] = [];
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
-  sub = new Subscription();
+  sub$ = new Subscription();
   changes = new Subject<THREE.Vector3>();
 
   constructor(
@@ -43,7 +43,7 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
       const mesh = new THREE.Mesh(value.geometry, value.material);
       const { x, y, z } = value.position;
       mesh.position.set(x, y, z);
-      this.mesh.push(mesh);
+      this.meshArray.push(mesh);
       this.animations.push(value.animation ? value.animation.bind(this, mesh) : null);
     });
   };
@@ -53,14 +53,11 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.sub.unsubscribe();
+    this.sub$.unsubscribe();
   }
 
   ngOnInit(): void {
-    this.sub.add(this.changes.pipe(
-      debounceTime(600),
-      switchMap(value => this.cameraService.saveCameraPosition(value)),
-    ).subscribe(() => {
+    this.sub$.add(this.changesPipe().subscribe(() => {
     }));
     this.cameraService.readCameraPosition().subscribe(position => {
       this.cameraPosition = position;
@@ -69,6 +66,13 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
         this.camera.position.set(x, y, z);
       }
     });
+  }
+
+  changesPipe(): Observable<any> {
+    return this.changes.pipe(
+      debounceTime(600),
+      switchMap(value => this.cameraService.saveCameraPosition(value)),
+    );
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -124,7 +128,7 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
     // scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('black');
-    this.scene.add(...this.mesh);
+    this.scene.add(...this.meshArray);
 
     // camera
     let aspectRatio = this.getAspectRatio();
@@ -139,8 +143,12 @@ export class SceneComponent implements AfterViewInit, OnInit, OnDestroy {
     this.scene.add(this.camera);
   }
 
+  composeRenderer() {
+    return new THREE.WebGLRenderer({ canvas: this.canvas });
+  }
+
   startRenderingLoop() {
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
+    this.renderer = this.composeRenderer();
     this.renderer.setPixelRatio(devicePixelRatio);
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
 
